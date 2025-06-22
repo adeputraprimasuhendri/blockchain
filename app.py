@@ -528,19 +528,6 @@ class BlockchainNode:
 # Contoh penggunaan
 if __name__ == '__main__':
     import sys
-
-    # Ambil port dari argument atau gunakan default
     port = int(sys.argv[1]) if len(sys.argv) > 1 else 5000
-
-    # Buat dan jalankan node
     node = BlockchainNode(port=port)
-
-    # Tambahkan beberapa transaksi awal untuk testing
-    if port == 5000:
-        initial_tx = Transaction("genesis", "alice", 100)
-        node.blockchain.add_transaction(initial_tx)
-
-        initial_tx2 = Transaction("genesis", "bob", 50)
-        node.blockchain.add_transaction(initial_tx2)
-
     node.run(debug=True)
