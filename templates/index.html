@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blockchain Node Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'blockchain': {
+                            50: '#f0f9ff',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            700: '#1d4ed8',
+                            900: '#1e3a8a'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50 font-sans">
+    <div class="min-h-screen">
+        <!-- Header -->
+        <header class="bg-white shadow-sm border-b">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between items-center h-16">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <h1 class="text-2xl font-bold text-gray-900">⛓️ Blockchain Node</h1>
+                        </div>
+                        <div class="ml-6">
+                            <span id="nodeStatus" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                Connecting...
+                            </span>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <input type="text" id="nodeUrl" placeholder="http://localhost:5000"
+                               class="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blockchain-500 focus:border-transparent">
+                        <button onclick="connectToNode()" class="bg-blockchain-600 text-white px-4 py-2 rounded-md hover:bg-blockchain-700 transition-colors text-sm font-medium">
+                            Connect
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <!-- Dashboard Grid -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <!-- Left Column - Node Status & Mining -->
+                <div class="lg:col-span-1 space-y-6">
+                    <!-- Node Status Card -->
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4">Node Status</h3>
+                        <div class="space-y-3">
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Node ID:</span>
+                                <span id="nodeId" class="font-mono text-sm">-</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Chain Length:</span>
+                                <span id="chainLength" class="font-semibold">-</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Pending TXs:</span>
+                                <span id="pendingTxs" class="font-semibold">-</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Connected Nodes:</span>
+                                <span id="connectedNodes" class="font-semibold">-</span>
+                            </div>
+                        </div>
+                        <button onclick="refreshStatus()" class="mt-4 w-full bg-gray-100 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-200 transition-colors text-sm">
+                            Refresh Status
+                        </button>
+                    </div>
+
+                    <!-- Mining Control -->
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4">Mining Control</h3>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Miner Address</label>
+                                <input type="text" id="minerAddress" placeholder="miner_5000"
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blockchain-500 focus:border-transparent">
+                            </div>
+                            <div class="flex space-x-2">
+                                <button onclick="mineBlock()" class="flex-1 bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors font-medium">
+                                    Mine Block
+                                </button>
+                                <button onclick="toggleAutoMining()" id="autoMineBtn" class="flex-1 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors font-medium">
+                                    Auto Mine
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Balance Checker -->
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4">Check Balance</h3>
+                        <div class="space-y-4">
+                            <div>
+                                <input type="text" id="balanceAddress" placeholder="Enter address"
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blockchain-500 focus:border-transparent">
+                            </div>
+                            <button onclick="checkBalance()" class="w-full bg-blockchain-600 text-white px-4 py-2 rounded-md hover:bg-blockchain-700 transition-colors font-medium">
+                                Check Balance
+                            </button>
+                            <div id="balanceResult" class="text-center font-semibold text-lg text-blockchain-700 hidden"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column - Transactions & Blockchain -->
+                <div class="lg:col-span-2 space-y-6">
+                    <!-- New Transaction -->
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4">Create Transaction</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">From Address</label>
+                                <input type="text" id="fromAddress" placeholder="sender_address"
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blockchain-500 focus:border-transparent">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">To Address</label>
+                                <input type="text" id="toAddress" placeholder="recipient_address"
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blockchain-500 focus:border-transparent">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Amount</label>
+                                <input type="number" id="amount" placeholder="0.00" step="0.01"
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blockchain-500 focus:border-transparent">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Fee (optional)</label>
+                                <input type="number" id="fee" placeholder="0.00" step="0.01"
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blockchain-500 focus:border-transparent">
+                            </div>
+                        </div>
+                        <button onclick="createTransaction()" class="mt-4 w-full bg-blockchain-600 text-white px-4 py-2 rounded-md hover:bg-blockchain-700 transition-colors font-medium">
+                            Create Transaction
+                        </button>
+                    </div>
+
+                    <!-- Blockchain Viewer -->
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-lg font-semibold text-gray-900">Blockchain</h3>
+                            <button onclick="loadBlockchain()" class="bg-gray-100 text-gray-700 px-3 py-1 rounded-md hover:bg-gray-200 transition-colors text-sm">
+                                Refresh
+                            </button>
+                        </div>
+                        <div id="blockchainView" class="space-y-4 max-h-96 overflow-y-auto">
+                            <div class="text-center text-gray-500 py-8">
+                                Click "Refresh" to load blockchain data
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Node Management -->
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4">Node Management</h3>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Add Node</label>
+                                <div class="flex space-x-2">
+                                    <input type="text" id="newNode" placeholder="localhost:5001"
+                                           class="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blockchain-500 focus:border-transparent">
+                                    <button onclick="addNode()" class="bg-blockchain-600 text-white px-4 py-2 rounded-md hover:bg-blockchain-700 transition-colors font-medium">
+                                        Add
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="flex space-x-2">
+                                <button onclick="syncChain()" class="flex-1 bg-yellow-600 text-white px-4 py-2 rounded-md hover:bg-yellow-700 transition-colors font-medium">
+                                    Sync Chain
+                                </button>
+                                <button onclick="resolveConflicts()" class="flex-1 bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors font-medium">
+                                    Resolve Conflicts
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Notification Toast -->
+        <div id="toast" class="fixed bottom-4 right-4 bg-white border border-gray-200 rounded-lg shadow-lg p-4 transform translate-y-full transition-transform duration-300 ease-in-out z-50">
+            <div class="flex items-center">
+                <div id="toastIcon" class="flex-shrink-0 w-5 h-5 mr-3"></div>
+                <div id="toastMessage" class="text-sm font-medium text-gray-900"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentNodeUrl = 'http://127.0.0.1:5000';
+        let autoMiningEnabled = false;
+
+        // Initialize
+        document.getElementById('nodeUrl').value = currentNodeUrl;
+        document.getElementById('minerAddress').value = 'miner_5000';
+        connectToNode();
+
+        function showToast(message, type = 'info') {
+            const toast = document.getElementById('toast');
+            const icon = document.getElementById('toastIcon');
+            const messageEl = document.getElementById('toastMessage');
+
+            messageEl.textContent = message;
+
+            // Set icon and colors based on type
+            if (type === 'success') {
+                icon.innerHTML = '✅';
+                toast.className = toast.className.replace('bg-white border-gray-200', 'bg-green-50 border-green-200');
+            } else if (type === 'error') {
+                icon.innerHTML = '❌';
+                toast.className = toast.className.replace('bg-white border-gray-200', 'bg-red-50 border-red-200');
+            } else {
+                icon.innerHTML = 'ℹ️';
+                toast.className = toast.className.replace(/bg-\w+-50 border-\w+-200/, 'bg-white border-gray-200');
+            }
+
+            // Show toast
+            toast.classList.remove('translate-y-full');
+
+            // Hide after 3 seconds
+            setTimeout(() => {
+                toast.classList.add('translate-y-full');
+            }, 3000);
+        }
+
+        async function apiCall(endpoint, options = {}) {
+            try {
+                const response = await fetch(`${currentNodeUrl}${endpoint}`, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...options.headers
+                    },
+                    ...options
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                return await response.json();
+            } catch (error) {
+                console.error('API call failed:', error);
+                showToast(`API Error: ${error.message}`, 'error');
+                throw error;
+            }
+        }
+
+        async function connectToNode() {
+            const nodeUrl = document.getElementById('nodeUrl').value.trim();
+            if (nodeUrl) {
+                currentNodeUrl = nodeUrl.startsWith('http') ? nodeUrl : `http://${nodeUrl}`;
+                document.getElementById('nodeUrl').value = currentNodeUrl;
+            }
+
+            try {
+                await refreshStatus();
+                document.getElementById('nodeStatus').textContent = 'Connected';
+                document.getElementById('nodeStatus').className = 'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800';
+                showToast('Connected to blockchain node', 'success');
+            } catch (error) {
+                document.getElementById('nodeStatus').textContent = 'Disconnected';
+                document.getElementById('nodeStatus').className = 'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800';
+                showToast('Failed to connect to node', 'error');
+            }
+        }
+
+        async function refreshStatus() {
+            try {
+                const status = await apiCall('/status');
+                document.getElementById('nodeId').textContent = status.node_id || '-';
+                document.getElementById('chainLength').textContent = status.chain_length || '-';
+                document.getElementById('pendingTxs').textContent = status.pending_transactions || '-';
+                document.getElementById('connectedNodes').textContent = status.connected_nodes?.length || '0';
+                autoMiningEnabled = status.auto_mining || false;
+                updateAutoMineButton();
+            } catch (error) {
+                // Error already handled in apiCall
+            }
+        }
+
+        async function mineBlock() {
+            const minerAddress = document.getElementById('minerAddress').value.trim() || 'miner_5000';
+
+            try {
+                const result = await apiCall('/mine', {
+                    method: 'POST',
+                    body: JSON.stringify({ miner_address: minerAddress })
+                });
+                showToast('Block mined successfully!', 'success');
+                refreshStatus();
+            } catch (error) {
+                // Error already handled in apiCall
+            }
+        }
+
+        async function toggleAutoMining() {
+            const minerAddress = document.getElementById('minerAddress').value.trim() || 'miner_5000';
+
+            try {
+                const result = await apiCall('/auto_mine', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        enabled: !autoMiningEnabled,
+                        miner_address: minerAddress
+                    })
+                });
+                autoMiningEnabled = !autoMiningEnabled;
+                updateAutoMineButton();
+                showToast(result.message, 'success');
+            } catch (error) {
+                // Error already handled in apiCall
+            }
+        }
+
+        function updateAutoMineButton() {
+            const btn = document.getElementById('autoMineBtn');
+            if (autoMiningEnabled) {
+                btn.textContent = 'Stop Auto';
+                btn.className = 'flex-1 bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors font-medium';
+            } else {
+                btn.textContent = 'Auto Mine';
+                btn.className = 'flex-1 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors font-medium';
+            }
+        }
+
+        async function createTransaction() {
+            const fromAddress = document.getElementById('fromAddress').value.trim();
+            const toAddress = document.getElementById('toAddress').value.trim();
+            const amount = parseFloat(document.getElementById('amount').value) || 0;
+            const fee = parseFloat(document.getElementById('fee').value) || 0;
+
+            if (!fromAddress || !toAddress || amount <= 0) {
+                showToast('Please fill in all required fields', 'error');
+                return;
+            }
+
+            try {
+                const result = await apiCall('/transactions/new', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        sender: fromAddress,
+                        recipient: toAddress,
+                        amount: amount,
+                        fee: fee
+                    })
+                });
+                showToast('Transaction created successfully!', 'success');
+                // Clear form
+                document.getElementById('fromAddress').value = '';
+                document.getElementById('toAddress').value = '';
+                document.getElementById('amount').value = '';
+                document.getElementById('fee').value = '';
+                refreshStatus();
+            } catch (error) {
+                // Error already handled in apiCall
+            }
+        }
+
+        async function checkBalance() {
+            const address = document.getElementById('balanceAddress').value.trim();
+            if (!address) {
+                showToast('Please enter an address', 'error');
+                return;
+            }
+
+            try {
+                const result = await apiCall(`/balance/${address}`);
+                document.getElementById('balanceResult').textContent = `Balance: ${result.balance}`;
+                document.getElementById('balanceResult').classList.remove('hidden');
+            } catch (error) {
+                // Error already handled in apiCall
+            }
+        }
+
+        async function loadBlockchain() {
+            try {
+                const chain = await apiCall('/chain');
+                const blockchainView = document.getElementById('blockchainView');
+
+                if (chain.chain && chain.chain.length > 0) {
+                    blockchainView.innerHTML = chain.chain.map((block, index) => `
+                        <div class="border border-gray-200 rounded-lg p-4">
+                            <div class="flex justify-between items-start mb-2">
+                                <h4 class="font-semibold text-gray-900">Block #${block.index}</h4>
+                                <span class="text-xs text-gray-500">${new Date(block.timestamp * 1000).toLocaleString()}</span>
+                            </div>
+                            <div class="grid grid-cols-2 gap-2 text-sm">
+                                <div><span class="text-gray-600">Hash:</span> <span class="font-mono text-xs">${block.hash.substring(0, 16)}...</span></div>
+                                <div><span class="text-gray-600">Nonce:</span> ${block.nonce}</div>
+                                <div><span class="text-gray-600">Transactions:</span> ${block.transactions.length}</div>
+                                <div><span class="text-gray-600">Miner:</span> ${block.miner_address}</div>
+                            </div>
+                            ${block.transactions.length > 0 ? `
+                                <div class="mt-2 pt-2 border-t border-gray-100">
+                                    <div class="text-xs text-gray-600">Transactions:</div>
+                                    ${block.transactions.map(tx => `
+                                        <div class="text-xs text-gray-500 ml-2">
+                                            ${tx.sender} → ${tx.recipient}: ${tx.amount}
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            ` : ''}
+                        </div>
+                    `).join('');
+                } else {
+                    blockchainView.innerHTML = '<div class="text-center text-gray-500 py-8">No blocks found</div>';
+                }
+            } catch (error) {
+                // Error already handled in apiCall
+            }
+        }
+
+        async function addNode() {
+            const newNode = document.getElementById('newNode').value.trim();
+            if (!newNode) {
+                showToast('Please enter a node address', 'error');
+                return;
+            }
+
+            try {
+                const result = await apiCall('/nodes/register', {
+                    method: 'POST',
+                    body: JSON.stringify({ nodes: [newNode] })
+                });
+                showToast('Node added successfully!', 'success');
+                document.getElementById('newNode').value = '';
+                refreshStatus();
+            } catch (error) {
+                // Error already handled in apiCall
+            }
+        }
+
+        async function syncChain() {
+            try {
+                const result = await apiCall('/nodes/resolve');
+                showToast(result.message, 'success');
+                refreshStatus();
+            } catch (error) {
+                // Error already handled in apiCall
+            }
+        }
+
+        async function resolveConflicts() {
+            try {
+                const result = await apiCall('/nodes/resolve');
+                showToast(result.message, 'success');
+                refreshStatus();
+                loadBlockchain();
+            } catch (error) {
+                // Error already handled in apiCall
+            }
+        }
+
+        // Auto-refresh status every 10 seconds
+        setInterval(refreshStatus, 10000);
+    </script>
+</body>
+</html>
